@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>KoalaMath Pyodide Sandbox</title>
+  <title>KoalaMath Dual-Agent Sandbox</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <style>
     body {
@@ -10,18 +10,38 @@
       background-color: #f9fafb;
       padding: 2rem;
     }
+
     textarea {
       width: 100%;
-      height: 200px;
       font-family: monospace;
       font-size: 14px;
       padding: 1rem;
       border-radius: 8px;
       border: 1px solid #ccc;
     }
-    button {
+
+    #questionInput {
+      width: 100%;
+      font-size: 16px;
+      padding: 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #999;
+      margin-bottom: 1rem;
+    }
+
+    .grid-2 {
+      display: flex;
+      gap: 1rem;
       margin-top: 1rem;
-      margin-right: 1rem;
+    }
+
+    .grid-2 > textarea {
+      flex: 1;
+      height: 180px;
+    }
+
+    button {
+      margin-top: 0.5rem;
       padding: 0.7rem 1.5rem;
       font-size: 16px;
       border: none;
@@ -30,24 +50,35 @@
       border-radius: 8px;
       cursor: pointer;
     }
+
     pre {
       margin-top: 1.5rem;
-      background: #eef2ff;
+      background: #fefce8;
       padding: 1rem;
-      border-radius: 8px;
+      border-radius: 10px;
+      border: 1px solid #facc15;
       white-space: pre-wrap;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #333;
     }
   </style>
 </head>
 <body>
-  <h1>🐨 KoalaMath In-Browser Python Sandbox</h1>
-  <p>This runs safe math code from the LLM directly in your browser using Pyodide + SymPy.</p>
+  <h1>🐨 KoalaMath Dual-Agent Sandbox</h1>
 
-  <textarea id="codeInput" placeholder="Your generated SymPy code will appear here..."></textarea>
+  <!-- Chat-style input -->
+  <input type="text" id="questionInput" placeholder="🧠 Enter your math question here...">
   <br>
   <button onclick="fetchFromLLM()">✨ Ask LLM & Run</button>
-  <button onclick="runCode()">▶️ Run Locally</button>
 
+  <!-- Split boxes -->
+  <div class="grid-2">
+    <textarea id="codeInput" placeholder="📜 SymPy code will appear here..."></textarea>
+    <textarea id="reasoningBox" placeholder="🧠 Step-by-step explanation will appear here..."></textarea>
+  </div>
+
+  <!-- Output box -->
   <pre id="output">Output will appear here...</pre>
 
   <script>
@@ -60,34 +91,66 @@
     }
 
     async function fetchFromLLM() {
-      const question = prompt("🧠 Enter a math question:");
-      if (!question) return;
+      const question = document.getElementById("questionInput").value;
+      if (!question.trim()) return alert("❗ Please enter a question");
 
-      const response = await fetch("http://localhost:5000/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question })
-      });
+      try {
+        const response = await fetch("http://localhost:5000/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
 
-      const data = await response.json();
-      const generatedCode = data.generated_code?.replace(/\\n/g, "\n") || "";
+        const data = await response.json();
+        const generatedCode = data.generated_code?.replace(/\\n/g, "\n") || "";
+        const reasoning = data.reasoning?.replace(/\\n/g, "\n") || "";
+        const finalOutput = data.final_output || "No response generated.";
 
-      document.getElementById("codeInput").value = generatedCode;
-      runCode();
+        // ✅ Insert content into all 3 boxes
+        document.getElementById("codeInput").value = generatedCode;
+        document.getElementById("reasoningBox").value = reasoning;
+        document.getElementById("output").innerHTML = formatOutput(finalOutput);
+
+        if (data.verified) {
+          runCode(generatedCode);
+        }
+
+      } catch (err) {
+        console.error("❌ Error:", err);
+        document.getElementById("output").textContent = "❌ Error contacting backend: " + err.message;
+      }
     }
 
-    async function runCode() {
-      const raw = document.getElementById("codeInput").value;
+    async function runCode(code = null) {
+      const raw = code || document.getElementById("codeInput").value;
       const fixedCode = raw.replace(/\\n/g, "\n");
       const outputEl = document.getElementById("output");
 
       try {
         await pyodide.runPythonAsync(fixedCode);
         const result = await pyodide.runPythonAsync("_result");
-        outputEl.textContent = "✅ Result:\n" + result.toString();
+        outputEl.innerHTML += `<br><br><strong>🧮 Evaluated Result:</strong><br>${result.toString()}`;
       } catch (err) {
-        outputEl.textContent = "❌ Error:\n" + err.message;
+        outputEl.innerHTML += `<br><br><strong>❌ Error while executing code:</strong><br>${err.message}`;
       }
+    }
+
+    function formatOutput(text) {
+      const patterns = [
+        { emoji: "✅", label: "Question" },
+        { emoji: "🧠", label: "Reasoning" },
+        { emoji: "📜", label: "Code" },
+        { emoji: "🧪", label: "Verification" },
+        { emoji: "✅", label: "Final Result" },
+        { emoji: "❌", label: "Code verification failed" }
+      ];
+
+      patterns.forEach(({ emoji, label }) => {
+        const regex = new RegExp(`${emoji} ${label}:`, 'g');
+        text = text.replace(regex, `<strong>${emoji} ${label}:</strong><br>`);
+      });
+
+      return text.replace(/\n/g, "<br>");
     }
 
     loadPyodideEnv();

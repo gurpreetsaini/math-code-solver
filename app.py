@@ -16,10 +16,15 @@ def generate():
     result = langgraph_app.invoke({"question": question})
 
     return jsonify({
-        "question": question,
-        "reasoning": result.get("llm_output", ""),
-        "generated_code": result.get("generated_code", "")
-    })
+    "question": question,
+    "reasoning": result.get("reasoning", ""),
+    "generated_code": result.get("generated_code", ""),
+    "verification_message": result.get("verification_message", ""),
+    "verified": result.get("verified", False),
+    "result": result.get("result", ""),
+    "final_output": result.get("final_output", "")  # ✅ THIS LINE IS CRUCIAL
+})
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,159 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>KoalaMath Dual-Agent Sandbox</title>
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <meta charset="UTF-8" />
+  <title>KoalaMath Sandbox</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f9fafb;
-      padding: 2rem;
-    }
-
-    textarea {
-      width: 100%;
-      font-family: monospace;
-      font-size: 14px;
-      padding: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    #questionInput {
-      width: 100%;
-      font-size: 16px;
-      padding: 0.75rem;
-      border-radius: 10px;
-      border: 1px solid #999;
-      margin-bottom: 1rem;
-    }
-
-    .grid-2 {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .grid-2 > textarea {
-      flex: 1;
-      height: 180px;
-    }
-
-    button {
-      margin-top: 0.5rem;
-      padding: 0.7rem 1.5rem;
-      font-size: 16px;
-      border: none;
-      background-color: #22c55e;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    pre {
-      margin-top: 1.5rem;
-      background: #fefce8;
-      padding: 1rem;
-      border-radius: 10px;
-      border: 1px solid #facc15;
-      white-space: pre-wrap;
-      font-size: 15px;
-      line-height: 1.5;
-      color: #333;
-    }
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    textarea { width: 100%; height: 100px; margin: 10px 0; }
+    .section { margin-bottom: 20px; }
+    .output { white-space: pre-wrap; background: #e6f2ff; padding: 10px; border: 1px solid #ccc; }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>🐨 KoalaMath Dual-Agent Sandbox</h1>
+  <h2>🧠 KoalaMath Code Sandbox</h2>
 
-  <!-- Chat-style input -->
-  <input type="text" id="questionInput" placeholder="🧠 Enter your math question here...">
-  <br>
-  <button onclick="fetchFromLLM()">✨ Ask LLM & Run</button>
-
-  <!-- Split boxes -->
-  <div class="grid-2">
-    <textarea id="codeInput" placeholder="📜 SymPy code will appear here..."></textarea>
-    <textarea id="reasoningBox" placeholder="🧠 Step-by-step explanation will appear here..."></textarea>
+  <div class="section">
+    <label><strong>Enter your math question:</strong></label>
+    <input id="question" style="width: 100%;" placeholder="e.g. Solve 2x^2 - 8 = 0" />
+    <button onclick="sendQuestion()">Generate Code</button>
   </div>
 
-  <!-- Output box -->
-  <pre id="output">Output will appear here...</pre>
+  <div class="section">
+    <label><strong>📜 Step-by-step Reasoning:</strong></label>
+    <textarea id="reasoning" readonly></textarea>
+  </div>
+
+  <div class="section">
+    <label><strong>🧮 SymPy Code:</strong></label>
+    <textarea id="sympyCode" readonly></textarea>
+  </div>
+
+  <div class="section">
+    <label><strong>🛡️ Verification:</strong></label>
+    <div id="verifier" class="output"></div>
+  </div>
+
+  <div class="section">
+    <button id="runBtn" onclick="runCode()">Run Code</button>
+  </div>
+
+  <div class="section">
+    <label><strong>✅ Output:</strong></label>
+    <div id="result" class="output"></div>
+  </div>
 
   <script>
-    let pyodide = null;
+    let pyodideReady = false;
+    let codeVerified = false;
 
-    async function loadPyodideEnv() {
-      pyodide = await loadPyodide();
-      await pyodide.loadPackage("sympy");
-      document.getElementById("output").textContent = "✅ Pyodide loaded. Ready to run code!";
+    async function loadPyodideSandbox() {
+      window.pyodide = await loadPyodide();
+      pyodideReady = true;
     }
 
-    async function fetchFromLLM() {
-      const question = document.getElementById("questionInput").value;
-      if (!question.trim()) return alert("❗ Please enter a question");
+    async function sendQuestion() {
+      const question = document.getElementById("question").value;
 
-      try {
-        const response = await fetch("http://localhost:5000/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question })
-        });
-
-        const data = await response.json();
-        const generatedCode = data.generated_code?.replace(/\\n/g, "\n") || "";
-        const reasoning = data.reasoning?.replace(/\\n/g, "\n") || "";
-        const finalOutput = data.final_output || "No response generated.";
-
-        // ✅ Insert content into all 3 boxes
-        document.getElementById("codeInput").value = generatedCode;
-        document.getElementById("reasoningBox").value = reasoning;
-        document.getElementById("output").innerHTML = formatOutput(finalOutput);
-
-        if (data.verified) {
-          runCode(generatedCode);
-        }
-
-      } catch (err) {
-        console.error("❌ Error:", err);
-        document.getElementById("output").textContent = "❌ Error contacting backend: " + err.message;
-      }
-    }
-
-    async function runCode(code = null) {
-      const raw = code || document.getElementById("codeInput").value;
-      const fixedCode = raw.replace(/\\n/g, "\n");
-      const outputEl = document.getElementById("output");
-
-      try {
-        await pyodide.runPythonAsync(fixedCode);
-        const result = await pyodide.runPythonAsync("_result");
-        outputEl.innerHTML += `<br><br><strong>🧮 Evaluated Result:</strong><br>${result.toString()}`;
-      } catch (err) {
-        outputEl.innerHTML += `<br><br><strong>❌ Error while executing code:</strong><br>${err.message}`;
-      }
-    }
-
-    function formatOutput(text) {
-      const patterns = [
-        { emoji: "✅", label: "Question" },
-        { emoji: "🧠", label: "Reasoning" },
-        { emoji: "📜", label: "Code" },
-        { emoji: "🧪", label: "Verification" },
-        { emoji: "✅", label: "Final Result" },
-        { emoji: "❌", label: "Code verification failed" }
-      ];
-
-      patterns.forEach(({ emoji, label }) => {
-        const regex = new RegExp(`${emoji} ${label}:`, 'g');
-        text = text.replace(regex, `<strong>${emoji} ${label}:</strong><br>`);
+      const res = await fetch("http://127.0.0.1:5000/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
       });
 
-      return text.replace(/\n/g, "<br>");
+      const data = await res.json();
+      document.getElementById("reasoning").value = data.reasoning || "";
+      if (data.verified) {
+  document.getElementById("sympyCode").value = data.generated_code || "";
+} else {
+  document.getElementById("sympyCode").value = "🚫 Code blocked due to safety concerns.";
+}
+
+      document.getElementById("result").textContent = data.result || "";
+
+      const verifierEl = document.getElementById("verifier");
+      const runBtn = document.getElementById("runBtn");
+
+      if (data.verified) {
+        verifierEl.textContent = data.verification_message || "✅ Safe to run";
+        verifierEl.className = "output success";
+        runBtn.disabled = false;
+        codeVerified = true;
+      } else {
+        verifierEl.textContent = data.verification_message || "❌ Unsafe code blocked";
+        verifierEl.className = "output error";
+        runBtn.disabled = true;
+        codeVerified = false;
+      }
     }
 
-    loadPyodideEnv();
+    async function runCode() {
+      if (!pyodideReady) return;
+      const code = document.getElementById("sympyCode").value;
+      try {
+        await pyodide.loadPackage("sympy");
+        await pyodide.runPythonAsync(code);
+        const result = pyodide.globals.get("_result");
+        document.getElementById("result").textContent = "🧮 Evaluated Result:\n" + result.toString();
+      } catch (err) {
+        document.getElementById("result").textContent = "⚠️ Execution Error:\n" + err.message;
+      }
+    }
+
+    loadPyodideSandbox();
   </script>
 </body>
 </html>

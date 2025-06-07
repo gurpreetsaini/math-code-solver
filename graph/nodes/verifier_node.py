@@ -1,26 +1,34 @@
-# graph/nodes/verifier_node.py
-
 def verifier_node(input_data: dict) -> dict:
     print("🧪 Verifier Agent checking code...")
 
     code = input_data["generated_code"]
 
-    # List of potentially dangerous keywords
-    unsafe_keywords = ["import os", "eval", "exec", "subprocess", "open", "socket", "__import__"]
+    # Lowercase and split into lines for stricter line-by-line validation
+    code_lines = code.strip().lower().splitlines()
 
-    # Reject if any unsafe keywords are found
-    if any(kw in code for kw in unsafe_keywords):
-        return {
-            **input_data,
-            "verified": False,
-            "verification_message": "❌ Code contains unsafe operations."
-        }
+    # Critical unsafe patterns (cleaned of whitespace for detection)
+    unsafe_keywords = [
+        "importos", "__import__('os')", "__import__(\"os\")",
+        "eval", "exec", "subprocess", "open", "socket"
+    ]
 
-    # Allow code that clearly uses SymPy
+    # Check each line individually
+    for line in code_lines:
+        cleaned_line = line.replace(" ", "")
+        if any(bad in cleaned_line for bad in unsafe_keywords):
+            return {
+                **input_data,
+                "verified": False,
+                "verification_message": "❌ Code contains unsafe operations."
+            }
+
+    # Allow if clearly using SymPy
     uses_sympy = any(sym in code for sym in ["sympy", "symbols", "Eq", "solve"])
 
-    # Allow simple math if it safely assigns to _result
-    is_simple_math = "_result" in code and not any(bad in code for bad in unsafe_keywords)
+    # Allow safe simple math fallback
+    is_simple_math = "_result" in code and not any(
+        bad in code.replace(" ", "").lower() for bad in unsafe_keywords
+    )
 
     if uses_sympy or is_simple_math:
         return {
@@ -29,7 +37,7 @@ def verifier_node(input_data: dict) -> dict:
             "verification_message": "✅ Code looks safe and valid."
         }
 
-    # Default fallback: not verified
+    # Default fallback: reject unclear or suspicious code
     return {
         **input_data,
         "verified": False,

@@ -29,3 +29,4 @@ builder.add_edge("output", END)
 
 # Build the graph
 graph = builder.compile()
+app = graph

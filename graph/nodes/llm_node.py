@@ -1,5 +1,3 @@
-
-
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -34,18 +32,38 @@ def llm_node(input_data: dict) -> dict:
 
     full_output = response.choices[0].message.content.strip()
 
-    # Parse response: separate explanation and code
+    # Initialize
     explanation = ""
     generated_code = ""
 
+    # Try Markdown-based format first
     if "```python" in full_output:
-        parts = full_output.split("```python")
-        explanation = parts[0].strip()
-        code_block = parts[1].split("```")[0]
-        generated_code = code_block.strip()
+        try:
+            parts = full_output.split("```python")
+            explanation = parts[0].strip()
+            code_block = parts[1].split("```")[0]
+            generated_code = code_block.strip()
+        except Exception as e:
+            print("⚠️ Markdown parsing failed, trying fallback...")
     else:
-        # fallback if no markdown formatting
-        generated_code = full_output.strip()
+        # Fallback 1: Look for Reasoning: and Code:
+        if "Reasoning:" in full_output and "Code:" in full_output:
+            try:
+                reason_part = full_output.split("Reasoning:")[1]
+                if "Code:" in reason_part:
+                    explanation, raw_code = reason_part.split("Code:")
+                    explanation = explanation.strip()
+                    generated_code = raw_code.strip()
+                else:
+                    explanation = reason_part.strip()
+            except Exception as e:
+                print("⚠️ Fallback split by Reasoning/Code failed")
+                explanation = ""
+                generated_code = full_output.strip()
+        else:
+            # Fallback 2: Treat whole output as code
+            generated_code = full_output.strip()
+            explanation = "(No explanation provided)"
 
     print("📖 Explanation:\n", explanation)
     print("📬 Generated code:\n", generated_code)

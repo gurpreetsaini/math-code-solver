@@ -1,3 +1,5 @@
+
+
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -15,32 +17,41 @@ def llm_node(input_data: dict) -> dict:
 
     question = input_data["question"]
 
+    # Load chain-of-thought prompt template
+    with open("prompts/code_generation_prompt.txt", "r", encoding="utf-8") as f:
+        prompt_template = f.read()
+
+    prompt = prompt_template.replace("{question}", question)
+
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful Python tutor who ONLY returns raw Python code using SymPy. No explanations. No markdown. Just code."
-            },
-            {
-                "role": "user",
-                "content": f"Write Python code to solve this math problem using SymPy:\n{question}\n\nReturn ONLY the Python code. No markdown. No explanation."
-            }
+            {"role": "system", "content": "You are a helpful math tutor."},
+            {"role": "user", "content": prompt}
         ],
         stream=False
     )
 
-    # Clean code: remove markdown fences if present
-    generated_code = response.choices[0].message.content.strip()
+    full_output = response.choices[0].message.content.strip()
 
-    if generated_code.startswith("```"):
-        lines = generated_code.splitlines()
-        lines = [line for line in lines if not line.strip().startswith("```")]
-        generated_code = "\n".join(lines).strip()
+    # Parse response: separate explanation and code
+    explanation = ""
+    generated_code = ""
 
-    print("📬 Cleaned code:\n", generated_code)
+    if "```python" in full_output:
+        parts = full_output.split("```python")
+        explanation = parts[0].strip()
+        code_block = parts[1].split("```")[0]
+        generated_code = code_block.strip()
+    else:
+        # fallback if no markdown formatting
+        generated_code = full_output.strip()
+
+    print("📖 Explanation:\n", explanation)
+    print("📬 Generated code:\n", generated_code)
 
     return {
         "question": question,
+        "explanation": explanation,
         "generated_code": generated_code
     }

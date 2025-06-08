@@ -57,37 +57,50 @@
 
     async function sendQuestion() {
       const question = document.getElementById("question").value;
+      document.getElementById("reasoning").value = "";
+      document.getElementById("sympyCode").value = "";
+      document.getElementById("result").textContent = "";
+      document.getElementById("verifier").textContent = "";
+      const runBtn = document.getElementById("runBtn");
+      runBtn.disabled = true;
+      codeVerified = false;
 
-      const res = await fetch("http://127.0.0.1:5000/generate", {
+      // Stream explainer output
+      const res = await fetch("http://127.0.0.1:5000/stream_explainer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
-
-      const data = await res.json();
-      document.getElementById("reasoning").value = data.reasoning || "";
-      if (data.verified) {
-  document.getElementById("sympyCode").value = data.generated_code || "";
-} else {
-  document.getElementById("sympyCode").value = "🚫 Code blocked due to safety concerns.";
-}
-
-      document.getElementById("result").textContent = data.result || "";
-
-      const verifierEl = document.getElementById("verifier");
-      const runBtn = document.getElementById("runBtn");
-
-      if (data.verified) {
-        verifierEl.textContent = data.verification_message || "✅ Safe to run";
-        verifierEl.className = "output success";
-        runBtn.disabled = false;
-        codeVerified = true;
-      } else {
-        verifierEl.textContent = data.verification_message || "❌ Unsafe code blocked";
-        verifierEl.className = "output error";
-        runBtn.disabled = true;
-        codeVerified = false;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let reasoning = "";
+      let code = "";
+      let inCode = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        // Simple split for code block
+        if (chunk.includes("```python")) {
+          inCode = true;
+          const parts = chunk.split("```python");
+          reasoning += parts[0];
+          code += parts[1] || "";
+        } else if (inCode) {
+          // End of code block
+          if (chunk.includes("```")) {
+            code += chunk.split("```", 1)[0];
+            inCode = false;
+          } else {
+            code += chunk;
+          }
+        } else {
+          reasoning += chunk;
+        }
+        document.getElementById("reasoning").value = reasoning;
+        document.getElementById("sympyCode").value = code;
       }
+      // After streaming, you may want to trigger verification, etc.
     }
 
     async function runCode() {

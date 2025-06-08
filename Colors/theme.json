@@ -1,0 +1,39 @@
+{
+  "colors": {
+    "primary": "#4D6CFA",
+    "secondary": "#FF7A45",
+    "accent": "#6DD400",
+    "light": "#F5F9FF",
+    "dark": "#2D3748",
+    "pink": "#FF6B8B",
+    "purple": "#9D6CFF",
+    "yellow": "#FFD166"
+  },
+  "fonts": {
+    "body": "Quicksand, sans-serif",
+    "heading": "Comic Neue, cursive"
+  },
+  "buttons": {
+    "primary": {
+      "gradient": [
+        "#4D6CFA",
+        "#9D6CFF"
+      ],
+      "hover": "scale and shadow"
+    },
+    "secondary": {
+      "gradient": [
+        "#FF7A45",
+        "#FFD166"
+      ],
+      "hover": "scale and shadow"
+    },
+    "accent": {
+      "gradient": [
+        "#6DD400",
+        "#A8E063"
+      ],
+      "hover": "scale and shadow"
+    }
+  }
+}

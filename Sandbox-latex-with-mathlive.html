@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KoalaMath Sandbox with Symbol Toolbar</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <!-- KaTeX JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Quicksand:400,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Comic+Neue:400,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #4D6CFA;
+      --secondary-color: #FF7A45;
+      --accent-color: #6DD400;
+      --light-bg: #F5F9FF;
+      --dark-bg: #2D3748;
+      --pink: #FF6B8B;
+      --purple: #9D6CFF;
+      --yellow: #FFD166;
+      --body-font: 'Quicksand', sans-serif;
+      --heading-font: 'Comic Neue', cursive;
+    }
+    
+    body {
+      font-family: var(--body-font);
+      background: var(--light-bg);
+      color: var(--dark-bg);
+      margin: 0;
+      padding: 0;
+    }
+    
+    h2 {
+      font-family: var(--heading-font);
+      color: var(--primary-color);
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 2.2rem;
+      letter-spacing: 1px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px 0 rgba(77,108,250,0.08);
+      padding: 32px 24px 24px 24px;
+    }
+    
+    .section {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      font-family: var(--heading-font);
+      color: var(--secondary-color);
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+    
+    input[type="text"], textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 2px solid var(--primary-color);
+      padding: 14px;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      background: var(--light-bg);
+      font-family: var(--body-font);
+      box-sizing: border-box;
+      transition: border 0.2s;
+    }
+    
+    input[type="text"]:focus, textarea:focus {
+      border: 2px solid var(--accent-color);
+      outline: none;
+    }
+    
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    button {
+      font-family: var(--heading-font);
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      background: linear-gradient(90deg, var(--primary-color), var(--purple));
+      color: white;
+      cursor: pointer;
+      margin: 8px 0;
+      box-shadow: 0 2px 8px 0 rgba(77,108,250,0.10);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    
+    button:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px 0 rgba(77,108,250,0.18);
+      background: linear-gradient(90deg, var(--secondary-color), var(--yellow));
+    }
+    
+    button:disabled {
+      background: #e0e0e0;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    
+    .output, .math-rendering {
+      background: #fffbe6;
+      border: 2px solid var(--accent-color);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 1.1rem;
+      margin-top: 6px;
+      min-height: 48px;
+      font-family: var(--body-font);
+    }
+    
+    .output.success {
+      background: #e8f5e9;
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+    
+    .output.error {
+      background: #ffebee;
+      border-color: var(--pink);
+      color: var(--pink);
+    }
+    
+    .preview-section {
+      background: var(--light-bg);
+      border: 2px solid var(--secondary-color);
+      border-radius: 12px;
+      padding: 18px 14px;
+      margin: 18px 0 10px 0;
+    }
+    
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .preview-title {
+      font-family: var(--heading-font);
+      color: var(--primary-color);
+      font-size: 1.2rem;
+    }
+    
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .preview-content {
+      min-height: 40px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1.5px solid var(--primary-color);
+      font-size: 1.1rem;
+    }
+    
+    /* Responsive for children */
+    @media (max-width: 600px) {
+      .container {
+        padding: 10px 2px;
+      }
+      .section {
+        padding: 10px 2px;
+      }
+      .symbol-toolbar {
+        flex-direction: column;
+      }
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner i {
+      font-size: 24px;
+      color: var(--primary-color);
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* New styles for compact UI */
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .input-group label {
+      margin-bottom: 4px;
+    }
+
+    .input-group input[type="text"] {
+      font-size: 1.1rem;
+      padding: 10px;
+    }
+
+    .input-group math-field {
+      font-size: 1.1rem;
+      padding: 10px;
+    }
+
+    .input-group button {
+      font-size: 0.95rem;
+      padding: 7px 10px;
+    }
+
+    .preview-section {
+      max-width: 420px;
+      margin: 10px auto;
+      padding: 10px 8px;
+    }
+
+    .preview-header {
+      min-height: 0;
+    }
+
+    .preview-title {
+      font-size: 1rem;
+    }
+
+    .preview-actions button {
+      font-size: 0.95rem;
+      padding: 7px 10px;
+    }
+
+    .preview-content {
+      font-size: 1rem;
+      min-height: 24px;
+      padding: 6px 8px;
+    }
+
+    .section label {
+      font-size: 1rem;
+    }
+
+    .section textarea {
+      font-size: 1rem;
+      min-height: 60px;
+      padding: 8px 6px;
+    }
+
+    .section .output {
+      padding: 8px 6px;
+      font-size: 1rem;
+    }
+
+    .section button {
+      font-size: 1rem;
+      padding: 8px 16px;
+    }
+
+    /* Reasoning line styles */
+    .reasoning-line {
+      display: block;
+      margin-bottom: 8px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+      <h2>🧠 KoalaMath Code Sandbox</h2>
+      <div class="section input-group" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+        <div style="flex: 1 1 320px; min-width: 220px;">
+          <label for="question"><strong>Type your math question:</strong></label>
+          <input id="question" type="text" style="font-size: 1.1rem;" placeholder="e.g. Solve $2x^2 - 8 = 0$ or \int_0^1 x^2 dx" />
+        </div>
+        <div style="flex: 1 1 320px; min-width: 220px;">
+          <label for="mathlive-input"><strong>🧮 Visual Math Input:</strong></label>
+          <math-field
+            id="mathlive-input"
+            virtual-keyboard-mode="onfocus"
+            style="width: 100%; font-size: 1.1rem; padding: 12px; border: 2px solid var(--accent-color); border-radius: 10px; background: white; margin-top: 8px; color: var(--text-color);">
+          </math-field>
+        </div>
+        <div style="flex: 0 0 110px; min-width: 90px; display: flex; flex-direction: column; gap: 8px; align-items: stretch;">
+          <button onclick="previewQuestion()" style="margin-top: 0; font-size: 0.95rem; padding: 7px 10px;">👀 Preview</button>
+        </div>
+      </div>
+      <div class="preview-section" style="max-width: 420px; margin: 10px auto 10px auto; padding: 10px 8px;">
+        <div class="preview-header" style="min-height: 0;">
+          <div class="preview-title" style="font-size: 1rem;">Question Preview</div>
+          <div class="preview-actions">
+            <button id="editBtn" class="symbol-btn" onclick="editQuestion()" style="font-size: 0.95rem; padding: 7px 10px;"><i class="fas fa-edit"></i> Edit</button>
+            <button id="confirmBtn" onclick="sendQuestion()" disabled style="font-size: 0.95rem; padding: 7px 10px;"><i class="fas fa-check"></i> Confirm</button>
+          </div>
+        </div>
+        <div id="questionPreview" class="preview-content math-rendering" style="font-size: 1rem; min-height: 24px; padding: 6px 8px;">Your question will appear here after preview</div>
+      </div>
+      <div class="section">
+        <label><strong>📜 Step-by-step Reasoning:</strong></label>
+        <div id="reasoning" class="math-rendering" style="padding: 10px 8px;"></div>
+      </div>
+      <div class="section">
+        <label for="sympyCode"><strong>🧮 SymPy Code:</strong></label>
+        <textarea id="sympyCode" readonly style="font-size: 1rem; min-height: 60px; padding: 8px 6px;"></textarea>
+      </div>
+      <div class="section">
+        <label><strong>🛡️ Verification:</strong></label>
+        <div id="verifier" class="output" style="padding: 8px 6px; font-size: 1rem;"></div>
+      </div>
+      <div class="section">
+        <button id="runBtn" onclick="runCode()" style="font-size: 1rem; padding: 8px 16px;">▶️ Run Code</button>
+      </div>
+      <div class="section">
+        <label><strong>✅ Output:</strong></label>
+        <div id="resultRaw" class="hidden"></div>
+        <div id="result" class="math-rendering" style="padding: 10px 8px;"></div>
+      </div>
+    </div>
+
+  <!-- MathLive support -->
+  <script type="module">
+    import "https://unpkg.com/mathlive?module";
+  </script>
+
+  <script>
+      let pyodideReady = false;
+      let codeVerified = false;
+      let currentQuestion = "";
+
+      // Function to insert symbols at cursor position
+      function insertSymbol(symbol) {
+        const input = document.getElementById("question");
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const text = input.value;
+        
+        // If there's a selection, wrap the symbol around it
+        if (start !== end) {
+          const selectedText = text.substring(start, end);
+          let newText;
+          
+          // Handle fraction insertion
+          if (symbol === '\\frac{}{}') {
+            newText = text.substring(0, start) + 
+                      `\\frac{${selectedText}}{}` + 
+                      text.substring(end);
+            input.value = newText;
+            input.selectionStart = start + 7 + selectedText.length;
+            input.selectionEnd = input.selectionStart;
+          } 
+          // Handle square root insertion
+          else if (symbol === '\\sqrt{}') {
+            newText = text.substring(0, start) + 
+                      `\\sqrt{${selectedText}}` + 
+                      text.substring(end);
+            input.value = newText;
+            input.selectionStart = start + 7 + selectedText.length;
+            input.selectionEnd = input.selectionStart;
+          }
+          // Handle other symbols
+          else {
+            newText = text.substring(0, start) + 
+                      symbol + 
+                      text.substring(end);
+            input.value = newText;
+            input.selectionStart = start + symbol.length;
+            input.selectionEnd = input.selectionStart;
+          }
+        } 
+        // Insert at cursor position
+        else {
+          const newText = text.substring(0, start) + 
+                          symbol + 
+                          text.substring(end);
+          input.value = newText;
+          
+          // Position cursor correctly after insertion
+          let cursorPos = start + symbol.length;
+          
+          // Special handling for fractions
+          if (symbol === '\\frac{}{}') {
+            cursorPos = start + 6;
+          }
+          
+          input.selectionStart = cursorPos;
+          input.selectionEnd = cursorPos;
+        }
+        
+        input.focus();
+      }
+
+      // Function to render LaTeX in an element
+      function renderMath(elementId) {
+        const element = document.getElementById(elementId);
+        if (element && element.textContent) {
+          try {
+            // First we escape HTML to prevent XSS
+            element.textContent = element.textContent;
+            // Then render the math
+            renderMathInElement(element, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+              ],
+              throwOnError: false,
+              errorColor: "var(--error-color)"
+            });
+          } catch (e) {
+            console.error("KaTeX rendering error:", e);
+          }
+        }
+      }
+
+      // Function to format reasoning text with proper paragraphs and math
+      function formatReasoning(text) {
+        if (!text) return '';
+        // Split into lines and wrap each in a <div> for clear separation
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        let html = '';
+        lines.forEach(line => {
+          html += `<div class='reasoning-line' style='display: block; margin-bottom: 8px; padding: 4px 0; border-bottom: 1px dashed #e0e0e0;'>${line}</div>`;
+        });
+        return html;
+      }
+
+      // Only update preview and enable confirm button on Preview button click
+      function previewQuestion() {
+        // Always get the latest value from the input box (which may be set by MathLive or typed by user)
+        let latex = document.getElementById("question").value;
+        let human = latex;
+        // If MathLive has a value, use its spoken version for human preview
+        const mathlive = document.getElementById("mathlive-input");
+        if (mathlive && latex) {
+          // Set MathLive's value to match the input box if user typed directly
+          mathlive.setValue(latex, { format: 'latex' });
+          human = mathlive.getValue("spoken");
+        }
+        currentQuestion = latex;
+        if (!latex) {
+          document.getElementById("questionPreview").textContent = "Please enter a math question";
+          document.getElementById("confirmBtn").disabled = true;
+          return;
+        }
+        document.getElementById("questionPreview").innerHTML = `<b>Human:</b> ${human}<br><b>LaTeX:</b> <code>${latex}</code>`;
+        renderMath("questionPreview");
+        document.getElementById("confirmBtn").disabled = false;
+        document.querySelector(".preview-section").scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      // Edit the question after preview
+      function editQuestion() {
+        document.getElementById("question").value = currentQuestion;
+        document.getElementById("question").focus();
+        document.getElementById("confirmBtn").disabled = true;
+      }
+
+      async function loadPyodideSandbox() {
+        window.pyodide = await loadPyodide();
+        pyodideReady = true;
+      }
+
+      async function sendQuestion() {
+        // Always use the latest value from the input box (which may be set by MathLive or typed by user)
+        let question = document.getElementById("question").value;
+        currentQuestion = question;
+        if (!question) return;
+        document.getElementById("questionPreview").innerHTML = '<div class="spinner"><i class="fas fa-spinner"></i> Generating code...</div>';
+        document.getElementById("reasoning").innerHTML = '<div class="spinner"><i class="fas fa-spinner"></i> Generating step-by-step reasoning...</div>';
+        document.getElementById("sympyCode").value = "";
+        document.getElementById("resultRaw").textContent = "";
+        document.getElementById("result").innerHTML = "";
+        document.getElementById("verifier").textContent = "";
+        const runBtn = document.getElementById("runBtn");
+        runBtn.disabled = true;
+        codeVerified = false;
+        try {
+          // Use streaming endpoint for reasoning/code
+          const res = await fetch("http://127.0.0.1:5000/stream_explainer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question }),
+          });
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let reasoning = "";
+          let code = "";
+          let inCode = false;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            if (chunk.includes("```python")) {
+              inCode = true;
+              const parts = chunk.split("```python");
+              reasoning += parts[0];
+              code += parts[1] || "";
+            } else if (inCode) {
+              if (chunk.includes("```")) {
+                code += chunk.split("```", 1)[0];
+                inCode = false;
+              } else {
+                code += chunk;
+              }
+            } else {
+              reasoning += chunk;
+            }
+            // Only update if element exists
+            const reasoningRaw = document.getElementById("reasoningRaw");
+            if (reasoningRaw) reasoningRaw.value = reasoning;
+            document.getElementById("reasoning").innerHTML = formatReasoning(reasoning);
+            renderMath("reasoning");
+            document.getElementById("sympyCode").value = code;
+          }
+          // After streaming, call /generate for verification and result
+          const verifyRes = await fetch("http://127.0.0.1:5000/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question }),
+          });
+          const data = await verifyRes.json();
+          // Update code, verification, and result/output
+          if (data.verified) {
+            document.getElementById("sympyCode").value = data.generated_code || "";
+          } else {
+            document.getElementById("sympyCode").value = "🚫 Code blocked due to safety concerns.";
+          }
+          document.getElementById("resultRaw").textContent = data.result || "";
+          if (data.result) {
+            document.getElementById("result").innerHTML = formatReasoning(data.result);
+            renderMath("result");
+          }
+          const verifierEl = document.getElementById("verifier");
+          if (data.verified) {
+            verifierEl.textContent = data.verification_message || "✅ Safe to run";
+            verifierEl.className = "output success";
+            runBtn.disabled = false;
+            codeVerified = true;
+          } else {
+            verifierEl.textContent = data.verification_message || "❌ Unsafe code blocked";
+            verifierEl.className = "output error";
+            runBtn.disabled = true;
+            codeVerified = false;
+          }
+        } catch (error) {
+          document.getElementById("reasoning").innerHTML = `<div class="error">⚠️ Error: ${error.message}</div>`;
+          document.getElementById("sympyCode").value = "Error occurred during code generation";
+        }
+      }
+
+      async function runCode() {
+        if (!pyodideReady) return;
+        const code = document.getElementById("sympyCode").value;
+        
+        // Show loading indicator
+        document.getElementById("result").innerHTML = 
+          '<div class="spinner"><i class="fas fa-spinner"></i> Running code...</div>';
+        
+        try {
+          await pyodide.loadPackage("sympy");
+          await pyodide.runPythonAsync(code);
+          const result = pyodide.globals.get("_result");
+          const resultText = "🧮 Evaluated Result:\n" + result.toString();
+          
+          // Store raw result and display formatted output
+          document.getElementById("resultRaw").textContent = resultText;
+          document.getElementById("result").innerHTML = formatReasoning(resultText);
+          renderMath("result");
+        } catch (err) {
+          const errorText = "⚠️ Execution Error:\n" + err.message;
+          document.getElementById("resultRaw").textContent = errorText;
+          document.getElementById("result").innerHTML = formatReasoning(errorText);
+        }
+      }
+
+      // Initialize KaTeX when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        loadPyodideSandbox();
+        // Render any initial math in the page
+        renderMath("reasoning");
+        renderMath("result");
+        
+        // Set up example question for demonstration
+        setTimeout(() => {
+          document.getElementById("question").value = "Solve $\\int_0^1 x^2 dx$";
+          previewQuestion();
+        }, 500);
+      });
+    
+  function toggleKeyboard() {
+    // No longer needed, function left empty or can be removed
+  }
+
+  // MathLive: sync human-friendly input to LaTeX input
+  // Removed auto-update preview and confirm button functionality
+  </script>
+  </div>
+</body>
+</html>

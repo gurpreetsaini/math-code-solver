@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from graph.edges import app as langgraph_app
 
@@ -24,6 +24,19 @@ def generate():
     "result": result.get("result", ""),
     "final_output": result.get("final_output", "")  # ✅ THIS LINE IS CRUCIAL
 })
+
+@app.route("/stream_explainer", methods=["POST"])
+def stream_explainer():
+    data = request.get_json()
+    question = data.get("question", "")
+    if not question:
+        return jsonify({"error": "No question provided"}), 400
+
+    from graph.nodes.explainer_node import explainer_node_stream
+    def generate():
+        for chunk in explainer_node_stream({"question": question}):
+            yield chunk
+    return Response(generate(), mimetype="text/plain")
 
 
 if __name__ == "__main__":

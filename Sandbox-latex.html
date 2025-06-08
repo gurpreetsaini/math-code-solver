@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KoalaMath Sandbox with Symbol Toolbar</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <!-- KaTeX JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #4a6fa5;
+      --secondary-color: #6b8cae;
+      --success-color: #4caf50;
+      --error-color: #f44336;
+      --light-bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+      --toolbar-bg: #f0f7ff;
+      --toolbar-hover: #d1e5ff;
+      --symbol-color: #1a3c6e;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--light-bg);
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h2 {
+      color: var(--primary-color);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+    
+    .section {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      resize: vertical;
+      background-color: #f5f5f5;
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .output {
+      white-space: pre-wrap;
+      background-color: #f0f7ff;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      min-height: 50px;
+    }
+    
+    .error {
+      color: var(--error-color);
+      font-weight: bold;
+      background-color: #ffebee;
+      border-color: #ffcdd2;
+    }
+    
+    .success {
+      color: var(--success-color);
+      font-weight: bold;
+      background-color: #e8f5e9;
+      border-color: #c8e6c9;
+    }
+    
+    #question {
+      font-size: 16px;
+    }
+    
+    #runBtn {
+      display: block;
+      margin: 0 auto;
+      width: 200px;
+    }
+
+    /* Math rendering styles */
+    .math-rendering {
+      background-color: #f8f8f8;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 10px;
+      border: 1px solid #e0e0e0;
+      line-height: 1.8;
+      min-height: 60px;
+    }
+    
+    .math-rendering p {
+      margin: 0.5em 0;
+    }
+    
+    .katex-display {
+      margin: 0.5em 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    
+    .katex {
+      font-size: 1.1em;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    /* Symbol toolbar styles */
+    .symbol-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--toolbar-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .symbol-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-right: 15px;
+      padding-right: 15px;
+      border-right: 1px solid var(--border-color);
+    }
+    
+    .symbol-group:last-child {
+      border-right: none;
+      margin-right: 0;
+      padding-right: 0;
+    }
+    
+    .symbol-btn {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+      min-width: 40px;
+      text-align: center;
+      color: var(--symbol-color); /* Fixed: Set text color for symbols */
+    }
+    
+    .symbol-btn:hover {
+      background-color: var(--toolbar-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .symbol-btn.math {
+      font-family: "KaTeX_Main", "Times New Roman", serif;
+      font-size: 18px;
+      font-weight: bold; /* Make symbols bolder */
+    }
+    
+    .symbol-btn i {
+      font-size: 18px;
+      color: var(--symbol-color); /* Fixed: Set icon color */
+    }
+    
+    /* Preview section */
+    .preview-section {
+      background-color: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .preview-title {
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .preview-content {
+      min-height: 60px;
+      padding: 15px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .symbol-group {
+        flex-wrap: wrap;
+        border-right: none;
+        margin-right: 0;
+        padding-right: 0;
+        margin-bottom: 10px;
+        width: 100%;
+      }
+      
+      .symbol-toolbar {
+        flex-direction: column;
+      }
+      
+      .preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      
+      .preview-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner i {
+      font-size: 24px;
+      color: var(--primary-color);
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>🧠 KoalaMath Code Sandbox with Symbol Toolbar</h2>
+
+  <div class="section">
+    <label for="question"><strong>Enter your math question:</strong></label>
+    
+    <!-- Symbol Toolbar with fixed visibility -->
+    <div class="symbol-toolbar">
+      <div class="symbol-group">
+        <button class="symbol-btn math" onclick="insertSymbol('+')">+</button>
+        <button class="symbol-btn math" onclick="insertSymbol('-')">−</button>
+        <button class="symbol-btn math" onclick="insertSymbol('*')">×</button>
+        <button class="symbol-btn math" onclick="insertSymbol('/')">÷</button>
+        <button class="symbol-btn math" onclick="insertSymbol('=')">=</button>
+      </div>
+      
+      <div class="symbol-group">
+        <button class="symbol-btn math" onclick="insertSymbol('^')">xʸ</button>
+        <button class="symbol-btn math" onclick="insertSymbol('_')">x_y</button>
+        <button class="symbol-btn" onclick="insertSymbol('\\frac{}{}')">
+          <i class="fas fa-divide"></i>
+        </button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\sqrt{}')">√</button>
+      </div>
+      
+      <div class="symbol-group">
+        <button class="symbol-btn math" onclick="insertSymbol('\\pi')">π</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\infty')">∞</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\alpha')">α</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\beta')">β</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\theta')">θ</button>
+      </div>
+      
+      <div class="symbol-group">
+        <button class="symbol-btn math" onclick="insertSymbol('\\int')">∫</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\sum')">∑</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\prod')">∏</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\lim')">lim</button>
+      </div>
+      
+      <div class="symbol-group">
+        <button class="symbol-btn math" onclick="insertSymbol('\\sin')">sin</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\cos')">cos</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\tan')">tan</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\log')">log</button>
+        <button class="symbol-btn math" onclick="insertSymbol('\\ln')">ln</button>
+      </div>
+    </div>
+    
+    <input id="question" type="text" placeholder="e.g. Solve $2x^2 - 8 = 0$ or \int_0^1 x^2 dx" />
+    <button onclick="previewQuestion()">Preview Question</button>
+    
+    <!-- Preview Section -->
+    <div class="preview-section">
+      <div class="preview-header">
+        <div class="preview-title">Question Preview</div>
+        <div class="preview-actions">
+          <button id="editBtn" class="symbol-btn" onclick="editQuestion()">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button id="confirmBtn" onclick="sendQuestion()" disabled>
+            <i class="fas fa-check"></i> Confirm & Generate Code
+          </button>
+        </div>
+      </div>
+      <div id="questionPreview" class="preview-content math-rendering">
+        Your question will appear here after preview
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <label><strong>📜 Step-by-step Reasoning:</strong></label>
+    <textarea id="reasoningRaw" class="hidden" readonly></textarea>
+    <div id="reasoning" class="math-rendering"></div>
+  </div>
+
+  <div class="section">
+    <label for="sympyCode"><strong>🧮 SymPy Code:</strong></label>
+    <textarea id="sympyCode" readonly></textarea>
+  </div>
+
+  <div class="section">
+    <label><strong>🛡️ Verification:</strong></label>
+    <div id="verifier" class="output"></div>
+  </div>
+
+  <div class="section">
+    <button id="runBtn" onclick="runCode()">Run Code</button>
+  </div>
+
+  <div class="section">
+    <label><strong>✅ Output:</strong></label>
+    <div id="resultRaw" class="hidden"></div>
+    <div id="result" class="math-rendering"></div>
+  </div>
+
+  <script>
+    let pyodideReady = false;
+    let codeVerified = false;
+    let currentQuestion = "";
+
+    // Function to insert symbols at cursor position
+    function insertSymbol(symbol) {
+      const input = document.getElementById("question");
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const text = input.value;
+      
+      // If there's a selection, wrap the symbol around it
+      if (start !== end) {
+        const selectedText = text.substring(start, end);
+        let newText;
+        
+        // Handle fraction insertion
+        if (symbol === '\\frac{}{}') {
+          newText = text.substring(0, start) + 
+                    `\\frac{${selectedText}}{}` + 
+                    text.substring(end);
+          input.value = newText;
+          input.selectionStart = start + 7 + selectedText.length;
+          input.selectionEnd = input.selectionStart;
+        } 
+        // Handle square root insertion
+        else if (symbol === '\\sqrt{}') {
+          newText = text.substring(0, start) + 
+                    `\\sqrt{${selectedText}}` + 
+                    text.substring(end);
+          input.value = newText;
+          input.selectionStart = start + 7 + selectedText.length;
+          input.selectionEnd = input.selectionStart;
+        }
+        // Handle other symbols
+        else {
+          newText = text.substring(0, start) + 
+                    symbol + 
+                    text.substring(end);
+          input.value = newText;
+          input.selectionStart = start + symbol.length;
+          input.selectionEnd = input.selectionStart;
+        }
+      } 
+      // Insert at cursor position
+      else {
+        const newText = text.substring(0, start) + 
+                        symbol + 
+                        text.substring(end);
+        input.value = newText;
+        
+        // Position cursor correctly after insertion
+        let cursorPos = start + symbol.length;
+        
+        // Special handling for fractions
+        if (symbol === '\\frac{}{}') {
+          cursorPos = start + 6;
+        }
+        
+        input.selectionStart = cursorPos;
+        input.selectionEnd = cursorPos;
+      }
+      
+      input.focus();
+    }
+
+    // Function to render LaTeX in an element
+    function renderMath(elementId) {
+      const element = document.getElementById(elementId);
+      if (element && element.textContent) {
+        try {
+          // First we escape HTML to prevent XSS
+          element.textContent = element.textContent;
+          // Then render the math
+          renderMathInElement(element, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            errorColor: "var(--error-color)"
+          });
+        } catch (e) {
+          console.error("KaTeX rendering error:", e);
+        }
+      }
+    }
+
+    // Function to format reasoning text with proper paragraphs and math
+    function formatReasoning(text) {
+      if (!text) return '';
+      
+      // Split into paragraphs
+      const paragraphs = text.split('\n\n');
+      let html = '';
+      
+      paragraphs.forEach(para => {
+        if (para.trim()) {
+          // Replace \n with <br> within paragraphs
+          const lines = para.split('\n').join('<br>');
+          html += `<p>${lines}</p>`;
+        }
+      });
+      
+      return html;
+    }
+
+    // Preview the question before generating code
+    function previewQuestion() {
+      const question = document.getElementById("question").value;
+      currentQuestion = question;
+      
+      if (!question) {
+        document.getElementById("questionPreview").textContent = "Please enter a math question";
+        return;
+      }
+      
+      // Display the raw question text
+      document.getElementById("questionPreview").textContent = question;
+      
+      // Render math in the preview
+      renderMath("questionPreview");
+      
+      // Enable the confirm button
+      document.getElementById("confirmBtn").disabled = false;
+      
+      // Scroll to the preview section
+      document.querySelector(".preview-section").scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+    // Edit the question after preview
+    function editQuestion() {
+      document.getElementById("question").value = currentQuestion;
+      document.getElementById("question").focus();
+      document.getElementById("confirmBtn").disabled = true;
+    }
+
+    async function loadPyodideSandbox() {
+      window.pyodide = await loadPyodide();
+      pyodideReady = true;
+    }
+
+    async function sendQuestion() {
+      if (!currentQuestion) return;
+      
+      // Show loading indicator
+      document.getElementById("questionPreview").innerHTML = 
+        '<div class="spinner"><i class="fas fa-spinner"></i> Generating code...</div>';
+      
+      // Show loading in reasoning section
+      document.getElementById("reasoning").innerHTML = 
+        '<div class="spinner"><i class="fas fa-spinner"></i> Generating step-by-step reasoning...</div>';
+      
+      try {
+        const res = await fetch("http://127.0.0.1:5000/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: currentQuestion }),
+        });
+
+        const data = await res.json();
+        
+        // Store raw reasoning in hidden textarea
+        document.getElementById("reasoningRaw").value = data.reasoning || "";
+        
+        // Format and display human-readable reasoning with math rendering
+        if (data.reasoning) {
+          document.getElementById("reasoning").innerHTML = formatReasoning(data.reasoning);
+          renderMath("reasoning");
+        }
+        
+        // Handle code verification
+        if (data.verified) {
+          document.getElementById("sympyCode").value = data.generated_code || "";
+        } else {
+          document.getElementById("sympyCode").value = "🚫 Code blocked due to safety concerns.";
+        }
+
+        // Store raw result and display formatted output
+        document.getElementById("resultRaw").textContent = data.result || "";
+        if (data.result) {
+          document.getElementById("result").innerHTML = formatReasoning(data.result);
+          renderMath("result");
+        }
+
+        const verifierEl = document.getElementById("verifier");
+        const runBtn = document.getElementById("runBtn");
+
+        if (data.verified) {
+          verifierEl.textContent = data.verification_message || "✅ Safe to run";
+          verifierEl.className = "output success";
+          runBtn.disabled = false;
+          codeVerified = true;
+        } else {
+          verifierEl.textContent = data.verification_message || "❌ Unsafe code blocked";
+          verifierEl.className = "output error";
+          runBtn.disabled = true;
+          codeVerified = false;
+        }
+      } catch (error) {
+        document.getElementById("reasoning").innerHTML = 
+          `<div class="error">⚠️ Error: ${error.message}</div>`;
+        document.getElementById("sympyCode").value = "Error occurred during code generation";
+      }
+    }
+
+    async function runCode() {
+      if (!pyodideReady) return;
+      const code = document.getElementById("sympyCode").value;
+      
+      // Show loading indicator
+      document.getElementById("result").innerHTML = 
+        '<div class="spinner"><i class="fas fa-spinner"></i> Running code...</div>';
+      
+      try {
+        await pyodide.loadPackage("sympy");
+        await pyodide.runPythonAsync(code);
+        const result = pyodide.globals.get("_result");
+        const resultText = "🧮 Evaluated Result:\n" + result.toString();
+        
+        // Store raw result and display formatted output
+        document.getElementById("resultRaw").textContent = resultText;
+        document.getElementById("result").innerHTML = formatReasoning(resultText);
+        renderMath("result");
+      } catch (err) {
+        const errorText = "⚠️ Execution Error:\n" + err.message;
+        document.getElementById("resultRaw").textContent = errorText;
+        document.getElementById("result").innerHTML = formatReasoning(errorText);
+      }
+    }
+
+    // Initialize KaTeX when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadPyodideSandbox();
+      // Render any initial math in the page
+      renderMath("reasoning");
+      renderMath("result");
+      
+      // Set up example question for demonstration
+      setTimeout(() => {
+        document.getElementById("question").value = "Solve $\\int_0^1 x^2 dx$";
+        previewQuestion();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

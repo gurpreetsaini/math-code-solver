@@ -1,0 +1,26 @@
+This repository provides a math solver that uses LangGraph to orchestrate multiple nodes that generate, verify and execute Python code.
+
+Below is a summary of the backend components and their key functions.
+
+### graph/nodes/input_node.py
+- `input_node(input_data: dict) -> dict` – Validates and extracts the user's question, raising an error if empty.
+### graph/nodes/llm_node.py
+- `llm_node(input_data: dict) -> dict` – Calls the DeepSeek API with a prompt to generate an explanation and code. It parses the LLM output and returns the reasoning text and generated Python code.
+### graph/nodes/explainer_node.py
+- `explainer_node(input_data: dict) -> dict` – Streams a response from the LLM to collect reasoning and a Python code block.
+- `explainer_node_stream(input_data: dict)` – Generator variant that yields streaming text chunks from the LLM, used by the `/stream_explainer` endpoint.
+### graph/nodes/verifier_node.py
+- `verifier_node(input_data: dict) -> dict` – Scans generated code for unsafe operations (e.g. imports, eval) and returns a boolean flag with a verification message.
+### graph/nodes/executor_node.py
+- `executor_node(input_data: dict) -> dict` – Executes the verified Python code inside a local namespace and captures the `_result` variable. Errors are caught and returned as part of the state.
+### graph/nodes/output_node.py
+- `output_node(input_data: dict) -> dict` – Builds the final formatted text combining the question, reasoning, code, verification status and execution result.
+### graph/edges.py
+- Constructs a `StateGraph` connecting the above nodes in order: `input` → `explainer` → `verifier` → `executor` → `output`. The compiled graph is exported as `graph` and aliased to `app` for the Flask API.
+### app.py
+- `generate()` – POST `/generate` endpoint. Invokes the graph with the question and returns JSON containing reasoning, code, verification status, result and final formatted output.
+- `stream_explainer()` – POST `/stream_explainer` endpoint. Streams tokens from `explainer_node_stream` so the client can display output incrementally.
+### main.py
+- Provides a simple CLI entry point that runs the graph on a hardcoded sample question for testing.
+
+These components collectively implement a pipeline that generates math explanations and safe executable code to solve a user's question, returning the answer along with the reasoning.

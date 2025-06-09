@@ -25,12 +25,15 @@ def verifier_node(input_data: dict) -> dict:
     # Allow if clearly using SymPy
     uses_sympy = any(sym in code for sym in ["sympy", "symbols", "Eq", "solve"])
 
+    # Also allow if the code relies on NumPy
+    uses_numpy = any(np in code for np in ["numpy", "np."])
+
     # Allow safe simple math fallback
     is_simple_math = "_result" in code and not any(
         bad in code.replace(" ", "").lower() for bad in unsafe_keywords
     )
 
-    if uses_sympy or is_simple_math:
+    if uses_sympy or uses_numpy or is_simple_math:
         return {
             **input_data,
             "verified": True,

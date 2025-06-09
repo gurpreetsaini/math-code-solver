@@ -10,7 +10,7 @@ Below is a summary of the backend components and their key functions.
 - `explainer_node(input_data: dict) -> dict` – Streams a response from the LLM to collect reasoning and a Python code block.
 - `explainer_node_stream(input_data: dict)` – Generator variant that yields streaming text chunks from the LLM, used by the `/stream_explainer` endpoint.
 ### graph/nodes/verifier_node.py
-- `verifier_node(input_data: dict) -> dict` – Scans generated code for unsafe operations (e.g. imports, eval) and returns a boolean flag with a verification message.
+- `verifier_node(input_data: dict) -> dict` – Scans generated code for unsafe operations (e.g. imports, eval) and returns a boolean flag with a verification message. It now accepts solutions that use either **SymPy** or **NumPy**.
 ### graph/nodes/executor_node.py
 - `executor_node(input_data: dict) -> dict` – Executes the verified Python code inside a local namespace and captures the `_result` variable. Errors are caught and returned as part of the state.
 ### graph/nodes/output_node.py
@@ -24,3 +24,6 @@ Below is a summary of the backend components and their key functions.
 - Provides a simple CLI entry point that runs the graph on a hardcoded sample question for testing.
 
 These components collectively implement a pipeline that generates math explanations and safe executable code to solve a user's question, returning the answer along with the reasoning.
+
+### Sandbox files
+- `sandbox.html`, `Sandbox-latex.html`, and `Sandbox-latex-with-mathlive.html` provide in-browser sandboxes powered by Pyodide. They can now load **SymPy** or **NumPy** packages dynamically based on the generated code.

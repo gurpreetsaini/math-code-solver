@@ -378,7 +378,7 @@
   </div>
 
   <div class="section">
-    <label for="sympyCode"><strong>🧮 SymPy Code:</strong></label>
+    <label for="sympyCode"><strong>🧮 Python Code:</strong></label>
     <textarea id="sympyCode" readonly></textarea>
   </div>
 
@@ -612,13 +612,21 @@
     async function runCode() {
       if (!pyodideReady) return;
       const code = document.getElementById("sympyCode").value;
-      
+
       // Show loading indicator
-      document.getElementById("result").innerHTML = 
+      document.getElementById("result").innerHTML =
         '<div class="spinner"><i class="fas fa-spinner"></i> Running code...</div>';
-      
+
       try {
-        await pyodide.loadPackage("sympy");
+        const usesSympy = code.includes("sympy");
+        const usesNumpy = code.includes("numpy") || code.includes("np.");
+        if (usesSympy) {
+          await pyodide.loadPackage("sympy");
+        }
+        if (usesNumpy) {
+          await pyodide.loadPackage("numpy");
+        }
+
         await pyodide.runPythonAsync(code);
         const result = pyodide.globals.get("_result");
         const resultText = "🧮 Evaluated Result:\n" + result.toString();

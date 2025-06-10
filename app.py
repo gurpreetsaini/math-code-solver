@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from graph.edges import app as langgraph_app
+from graph.signup_edges import signup_app
 
 app = Flask(__name__)
 CORS(app)  # ✅ Allow frontend HTML to call this API
@@ -37,6 +38,19 @@ def stream_explainer():
         for chunk in explainer_node_stream({"question": question}):
             yield chunk
     return Response(generate(), mimetype="text/plain")
+
+@app.route("/signup_questionnaire", methods=["POST"])
+def signup_questionnaire():
+    data = request.get_json()
+    parent_name = data.get("parent_name", "")
+    if not parent_name:
+        return jsonify({"error": "No parent name provided"}), 400
+    result = signup_app.invoke({"parent_name": parent_name})
+    return jsonify({
+        "parent_name": parent_name,
+        "questionnaire": result.get("questionnaire", ""),
+        "final_output": result.get("final_output", "")
+    })
 
 
 if __name__ == "__main__":
